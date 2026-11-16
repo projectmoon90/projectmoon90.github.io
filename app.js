@@ -199,7 +199,13 @@
 
   function renderTabs() {
     el.tabs.innerHTML = '';
-    const items = [{ id: 'all', label: '전체', emoji: '' }].concat(state.categories);
+    // 상품이 하나도 없는 카테고리는 탭에 띄우지 않음 (정의는 products.json에 남겨두면 상품이 생길 때 자동으로 나타남)
+    const used = new Set(state.products.map((p) => p.category));
+    const visible = state.categories.filter((c) => used.has(c.id));
+    if (state.category !== 'all' && !visible.some((c) => c.id === state.category)) {
+      state.category = 'all';
+    }
+    const items = [{ id: 'all', label: '전체', emoji: '' }].concat(visible);
     items.forEach((c) => {
       const btn = make('button', 'tab', c.label);
       btn.type = 'button';
