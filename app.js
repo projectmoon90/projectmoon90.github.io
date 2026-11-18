@@ -42,7 +42,7 @@
     disclosureTop: $('disclosureTopText'),
     disclosureBottom: $('disclosureBottom'),
     footerNote: $('footerNote'),
-    footerChannels: $('channelLinks'),
+    channels: $('channelLinks'),
     footerBrand: $('footerBrand'),
     year: $('year'),
     searchForm: $('searchForm'),
@@ -240,6 +240,40 @@
 
   /* ---------------- 렌더링 ---------------- */
 
+  // 채널 버튼 아이콘 (site.json의 url/label로 골라 씁니다. 모르는 채널은 이름만 표시)
+  const CHANNEL_ICONS = {
+    youtube:
+      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<rect x="2.4" y="5.2" width="19.2" height="13.6" rx="4.2" fill="none" stroke="currentColor" stroke-width="1.7"/>' +
+      '<path d="m10.2 9.1 4.9 2.9-4.9 2.9V9.1Z" fill="currentColor"/></svg>',
+    instagram:
+      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<rect x="3.6" y="3.6" width="16.8" height="16.8" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/>' +
+      '<circle cx="12" cy="12" r="3.9" fill="none" stroke="currentColor" stroke-width="1.7"/>' +
+      '<circle cx="16.9" cy="7.1" r="1.1" fill="currentColor"/></svg>',
+    tiktok:
+      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<path d="M13.9 4.2v9.6a3.6 3.6 0 1 1-3.6-3.6c.3 0 .6 0 .9.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' +
+      '<path d="M13.9 4.2c.5 2.3 2.1 3.9 4.4 4.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    blog:
+      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<path d="M6.2 3.8h7.6l4.4 4.4v12H6.2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
+      '<path d="M8.9 12.1h5.8M8.9 15.4h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+    link:
+      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<path d="M10.5 13.5a3.6 3.6 0 0 0 5.1 0l2.6-2.6a3.6 3.6 0 0 0-5.1-5.1L11.8 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' +
+      '<path d="M13.5 10.5a3.6 3.6 0 0 0-5.1 0l-2.6 2.6a3.6 3.6 0 0 0 5.1 5.1l1.3-1.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+  };
+
+  function channelIconKey(c) {
+    const hay = ((c.url || '') + ' ' + (c.label || '') + ' ' + (c.icon || '')).toLowerCase();
+    if (hay.includes('youtu') || hay.includes('유튜브')) return 'youtube';
+    if (hay.includes('instagram') || hay.includes('인스타')) return 'instagram';
+    if (hay.includes('tiktok') || hay.includes('틱톡')) return 'tiktok';
+    if (hay.includes('blog') || hay.includes('블로그')) return 'blog';
+    return 'link';
+  }
+
   function applySite(site) {
     const s = Object.assign({}, FALLBACK_SITE, site || {});
     const brand = Object.assign({}, FALLBACK_SITE.brand, s.brand || {});
@@ -268,18 +302,21 @@
     const channels = (Array.isArray(s.channels) ? s.channels : []).filter(
       (c) => c && c.label && c.url && c.url !== '#'
     );
-    el.footerChannels.innerHTML = '';
+    el.channels.innerHTML = '';
     if (channels.length) {
       channels.forEach((c) => {
-        const a = make('a', null, c.label);
+        const a = make('a', 'ch');
         a.href = c.url;
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
-        el.footerChannels.appendChild(a);
+        a.title = c.label;
+        a.setAttribute('aria-label', c.label + ' 채널 열기 (새 창)');
+        a.innerHTML = CHANNEL_ICONS[channelIconKey(c)] + '<span class="ch__label">' + c.label + '</span>';
+        el.channels.appendChild(a);
       });
-      el.footerChannels.hidden = false;
+      el.channels.hidden = false;
     } else {
-      el.footerChannels.hidden = true;
+      el.channels.hidden = true;
     }
   }
 
@@ -355,13 +392,14 @@
 
   function buildCard(p) {
     const cat = categoryOf(p.category);
+    const theme = cat && cat.theme ? cat.theme : 'default';
 
     const card = make('article', 'card');
     card.id = 'p-' + p.no;
     card.dataset.no = p.no;
 
-    // 썸네일
-    const thumb = make('div', 'thumb thumb--' + (cat && cat.theme ? cat.theme : 'default'));
+    // 썸네일 (1:1 크롭 + 좌상단 번호 배지 + 우상단 링크 복사)
+    const thumb = make('div', 'thumb thumb--' + theme);
     const fallbackEmoji = p.emoji || (cat && cat.emoji) || '🛍️';
 
     if (p.image) {
@@ -384,34 +422,34 @@
     const badge = make('span', 'badge', '#' + p.no);
     badge.setAttribute('aria-label', p.no + '번 상품');
     thumb.appendChild(badge);
-    card.appendChild(thumb);
 
-    // 본문
-    const body = make('div', 'card__body');
-
-    const top = make('div', 'card__top');
-    top.appendChild(make('span', 'cat', cat ? cat.label : '추천'));
     const copyBtn = make('button', 'copy');
     copyBtn.type = 'button';
     copyBtn.dataset.copy = p.no;
     copyBtn.setAttribute('aria-label', p.no + '번 상품 링크 복사');
     copyBtn.title = '이 상품 링크 복사';
     copyBtn.innerHTML =
-      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">' +
       '<path d="M10.5 13.5a3.6 3.6 0 0 0 5.1 0l2.6-2.6a3.6 3.6 0 0 0-5.1-5.1L11.8 7" ' +
       'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' +
       '<path d="M13.5 10.5a3.6 3.6 0 0 0-5.1 0l-2.6 2.6a3.6 3.6 0 0 0 5.1 5.1l1.3-1.3" ' +
       'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
-    top.appendChild(copyBtn);
-    body.appendChild(top);
+    thumb.appendChild(copyBtn);
 
+    card.appendChild(thumb);
+
+    // 본문
+    const body = make('div', 'card__body');
+
+    body.appendChild(make('span', 'cat cat--' + theme, cat ? cat.label : '추천'));
     body.appendChild(make('h3', 'card__name', p.name));
 
     if (p.pitch) body.appendChild(make('p', 'card__pitch', p.pitch));
 
+    // 태그는 넓은 화면에서만 (모바일 2열에서는 이름·한 줄 소개만 남겨 깔끔하게)
     const meta = make('div', 'card__meta');
     if (p.price) meta.appendChild(make('span', 'price', p.price));
-    p.tags.forEach((t) => meta.appendChild(make('span', 'tag', t)));
+    p.tags.slice(0, 2).forEach((t) => meta.appendChild(make('span', 'tag', t)));
     if (meta.childNodes.length) body.appendChild(meta);
 
     // CTA (쿠팡 링크에는 유입 출처 기반 subId가 자동으로 붙습니다)
@@ -421,7 +459,7 @@
     cta.href = buyHref;
     cta.innerHTML =
       '<span>쿠팡에서 보기</span>' +
-      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">' +
       '<path d="M7 17 17 7M9 7h8v8" fill="none" stroke="currentColor" stroke-width="2.2" ' +
       'stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -493,6 +531,7 @@
     const list = currentList();
 
     el.grid.innerHTML = '';
+    el.grid.classList.toggle('grid--single', list.length === 1);
     list.forEach((p) => el.grid.appendChild(buildCard(p)));
 
     el.resultLine.innerHTML = describe(list.length);
@@ -503,7 +542,7 @@
 
   function renderSkeletons() {
     el.grid.innerHTML = '';
-    for (let i = 0; i < 3; i += 1) {
+    for (let i = 0; i < 4; i += 1) {
       const s = make('div', 'skeleton');
       s.setAttribute('aria-hidden', 'true');
       el.grid.appendChild(s);
