@@ -11,6 +11,11 @@
   const DATA_URL = './products.json';
   const SITE_URL = './site.json';
 
+  // GA4 속성 '문구공 허브'의 데이터 스트림 '문구공 허브 웹' (gtag 스크립트는 index.html head에 있음)
+  // 유입 출처를 담아 두는 키 (?src=yt 로 들어오면 'yt')
+  const SRC_KEY = 'mgTrafficSrc';
+  const SRC_DEFAULT = 'direct';
+
   const FALLBACK_SITE = {
     brand: { emoji: '🧺', title: '꿀템 모음집', tagline: '영상에서 본 상품, 번호로 1초 만에 찾기' },
     searchHint: '번호나 상품명으로 검색 (예: 01, 장난감)',
@@ -25,7 +30,8 @@
     products: [],
     category: 'all',
     query: '',
-    ready: false
+    ready: false,
+    src: SRC_DEFAULT
   };
 
   const $ = (id) => document.getElementById(id);
@@ -109,6 +115,127 @@
     const res = await fetch(path, { cache: 'no-store' });
     if (!res.ok) throw new Error(path + ' ' + res.status);
     return res.json();
+  }
+
+  /* ---------------- 유입 출처(src) · subId · GA4 ---------------- */
+
+  /** 영문 소문자·숫자·하이픈만 남깁니다. "YT" → "yt", "youtube " → "youtube" */
+  function sanitizeSrc(raw) {
+    return String(raw == null ? '' : raw)
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/-{2,}/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 24)
+      .replace(/-+$/, '');
+  }
+
+  function readStoredSrc() {
+    try {
+      return sessionStorage.getItem(SRC_KEY) || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function storeSrc(value) {
+    try {
+      sessionStorage.setItem(SRC_KEY, value);
+    } catch (_) { /* 시크릿 모드 등 저장이 막혀도 동작에는 지장 없음 */ }
+  }
+
+  /** 주소의 ?src= 값을 우선 쓰고, 없으면 이번 세션에 기억해 둔 값, 그것도 없으면 direct */
+  function resolveTrafficSrc() {
+    let param = null;
+    try {
+      param = new URLSearchParams(window.location.search).get('src');
+    } catch (_) { /* 구형 브라우저 */ }
+
+    if (param != null) {
+      const clean = sanitizeSrc(param);
+      if (clean) {
+        storeSrc(clean);
+        return clean;
+      }
+    }
+
+    const saved = readStoredSrc();
+    if (saved) return saved;
+
+    storeSrc(SRC_DEFAULT);
+    return SRC_DEFAULT;
+  }
+
+  /** 쿠팡 링크에 붙일 값: {src}-{상품번호} 예) yt-01 */
+  function subIdFor(p) {
+    return state.src + '-' + p.no;
+  }
+
+  /**
+   * 상품 링크에 subId를 자동으로 붙입니다.
+   * 이미 ?가 있어도 &subId= 로 이어지고, 같은 subId가 있으면 중복으로 붙지 않습니다.
+   * products.json에 새 상품을 추가하면 그대로 적용됩니다.
+   */
+  function withSubId(url, subId) {
+    if (!url) return url;
+    try {
+      const u = new URL(url, window.location.href);
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') return url;
+      u.searchParams.set('subId', subId);
+      return u.toString();
+    } catch (_) {
+      return url;
+    }
+  }
+
+  function gaEvent(name, params) {
+    try {
+      if (typeof window.gtag === 'function') window.gtag('event', name, params || {});
+    } catch (_) { /* GA 스크립트가 차단돼도 사이트 동작은 유지 */ }
+  }
+
+  function trackVisit() {
+    try {
+      if (typeof window.gtag === 'function') {
+        // 이후 모든 이벤트에 유입 출처가 함께 실리도록 설정
+        window.gtag('set', { traffic_src: state.src });
+      }
+    } catch (_) { /* noop */ }
+
+    gaEvent('hub_visit', {
+      traffic_src: state.src,
+      page_path: window.location.pathname,
+      landing_query: window.location.search
+    });
+  }
+
+  function trackProductClick(p, href) {
+    const subId = subIdFor(p);
+    const cat = categoryOf(p.category);
+    const item = {
+      item_id: p.no,
+      item_name: p.name,
+      item_category: cat ? cat.label : '',
+      item_list_id: 'hub',
+      item_list_name: '문구공 허브'
+    };
+
+    gaEvent('coupang_click', {
+      item_id: p.no,
+      item_name: p.name,
+      item_category: cat ? cat.label : '',
+      traffic_src: state.src,
+      sub_id: subId,
+      link_url: href
+    });
+
+    // GA4 기본 전자상거래 이벤트 이름으로도 함께 기록
+    gaEvent('select_item', {
+      item_list_id: 'hub',
+      item_list_name: '문구공 허브',
+      traffic_src: state.src,
+      items: [item]
+    });
   }
 
   /* ---------------- 렌더링 ---------------- */
@@ -287,10 +414,11 @@
     p.tags.forEach((t) => meta.appendChild(make('span', 'tag', t)));
     if (meta.childNodes.length) body.appendChild(meta);
 
-    // CTA
+    // CTA (쿠팡 링크에는 유입 출처 기반 subId가 자동으로 붙습니다)
     const isDemo = !p.url || p.url === '#' || p.url.startsWith('#');
     const cta = make('a', 'cta');
-    cta.href = isDemo ? '#' : p.url;
+    const buyHref = isDemo ? '#' : withSubId(p.url, subIdFor(p));
+    cta.href = buyHref;
     cta.innerHTML =
       '<span>쿠팡에서 보기</span>' +
       '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
@@ -308,6 +436,12 @@
       cta.target = '_blank';
       cta.rel = 'nofollow sponsored noopener noreferrer';
       cta.setAttribute('aria-label', p.name + ' — 쿠팡에서 보기 (새 창)');
+      cta.addEventListener('click', () => {
+        // 세션 중 출처가 바뀌었거나 누락됐을 때를 대비해 직전에 한 번 더 맞춥니다.
+        const href = withSubId(p.url, subIdFor(p));
+        cta.href = href;
+        trackProductClick(p, href);
+      });
     }
 
     body.appendChild(cta);
@@ -476,14 +610,24 @@
     el.grid.addEventListener('click', async (e) => {      const btn = e.target.closest('[data-copy]');
       if (!btn) return;
       const no = btn.dataset.copy;
-      const base = window.location.href.split('#')[0];
-      const link = base + '#p-' + no;
+      // 복사하는 링크에도 지금 유입 출처를 담아 두어, 그 링크로 들어온 사람도 같은 출처로 집계되게 합니다.
+      let link = window.location.href.split('#')[0];
+      try {
+        const u = new URL(link);
+        u.searchParams.delete('no');
+        u.searchParams.delete('q');
+        if (state.src && state.src !== SRC_DEFAULT) u.searchParams.set('src', state.src);
+        else u.searchParams.delete('src');
+        link = u.toString();
+      } catch (_) { /* 주소 해석 실패 시 원본 주소 사용 */ }
+      link += '#p-' + no;
       const ok = await copyText(link);
       toast(ok ? `#${no} 링크를 복사했어요. 영상 설명란에 붙여 넣으세요.` : `복사에 실패했어요: ${link}`);
     });
   }
 
   async function init() {
+    state.src = resolveTrafficSrc();
     bind();
     renderSkeletons();
 
@@ -491,6 +635,7 @@
     const dataPromise = loadJSON(DATA_URL);
 
     applySite(await sitePromise);
+    trackVisit();
 
     try {
       const data = await dataPromise;
