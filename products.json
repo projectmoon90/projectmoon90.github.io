@@ -81,6 +81,17 @@
       "emoji": "🪼",
       "image": "assets/p07.jpg",
       "url": "https://link.coupang.com/a/iOdYsADTW0"
+    },
+    {
+      "no": "08",
+      "category": "life",
+      "name": "온수야 화장실 세면대 전기 순간 온수기",
+      "pitch": "찬물만 나오는 세면대에 3초면 온수! LED 온도 표시에 냉·온수 레버까지",
+      "price": "",
+      "tags": ["3초온수", "LED온도표시", "냉온수레버", "IPX4방수"],
+      "emoji": "♨️",
+      "image": "assets/p08.jpg",
+      "url": "https://link.coupang.com/a/iOegcvz9Mq"
     }
   ]
 }
