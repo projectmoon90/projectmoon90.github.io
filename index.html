@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<meta name="theme-color" content="#fbf7f2">
+<meta name="theme-color" content="#f6f4f1">
 <title>문구공의 탐나는 아이템 모음zip</title>
 <!-- Google tag (gtag.js) — GA4 속성 '문구공 허브' -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-P3YCNGL53S"></script>
@@ -22,32 +22,36 @@
 
 <header class="hero">
   <div class="hero__inner">
-    <div class="hero__top">
-      <div class="brand">
-        <span class="brand__logo" id="brandEmoji" aria-hidden="true">🧺</span>
-        <div class="brand__text">
-          <h1 class="brand__title" id="brandTitle">문구공의 탐나는 아이템 모음zip</h1>
-          <p class="brand__tagline" id="brandTagline">영상에서 본 그 상품, 번호로 1초 만에 찾기</p>
-        </div>
-      </div>
-      <nav class="channels" id="channelLinks" aria-label="채널 링크" hidden></nav>
-    </div>
     <p class="disclosure disclosure--top" id="disclosureTop">
-      <svg class="disclosure__icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M12 8.2a1.1 1.1 0 1 0 0-2.2 1.1 1.1 0 0 0 0 2.2Zm0 9.8a1 1 0 0 0 1-1v-5.6a1 1 0 1 0-2 0V17a1 1 0 0 0 1 1Z" fill="currentColor"/><path d="M12 3.6c4.6 0 8.4 3.8 8.4 8.4s-3.8 8.4-8.4 8.4S3.6 16.6 3.6 12 7.4 3.6 12 3.6Z" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
       <span id="disclosureTopText">이 페이지의 링크는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</span>
     </p>
+
+    <div class="brand">
+      <div class="brand__avatar" aria-hidden="true"><span id="brandEmoji">🧺</span></div>
+      <h1 class="brand__title" id="brandTitle">문구공의 탐나는 아이템 모음zip</h1>
+      <p class="brand__tagline" id="brandTagline">영상에서 본 그 상품, 번호로 1초 만에 찾기</p>
+      <nav class="channels" id="channelLinks" aria-label="채널 링크" hidden></nav>
+    </div>
+
+    <div class="search-head">
+      <span class="search-head__rule" aria-hidden="true"></span>
+      <span class="search-head__text">제품번호 or 이름 검색</span>
+      <span class="search-head__rule" aria-hidden="true"></span>
+    </div>
   </div>
 </header>
 
 <div class="toolbar">
   <div class="toolbar__inner">
     <form class="search" id="searchForm" role="search">
-      <svg class="search__icon" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="11" cy="11" r="6.4" stroke="currentColor" stroke-width="1.9" fill="none"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
       <label class="sr-only" for="searchInput">상품 검색</label>
       <input id="searchInput" name="q" type="search" inputmode="search" enterkeyhint="search"
-             placeholder="번호나 상품명으로 검색 (예: 01, 장난감)" autocomplete="off" autocapitalize="off" spellcheck="false">
+             placeholder="예: 09, 탁상시계" autocomplete="off" autocapitalize="off" spellcheck="false">
       <button class="search__clear" id="clearBtn" type="button" hidden aria-label="검색어 지우기">
         <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="search__submit" type="submit" aria-label="검색">
+        <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><circle cx="11" cy="11" r="6.4" stroke="currentColor" stroke-width="2" fill="none"/><path d="m16 16 4.2 4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
     </form>
     <nav class="tabs" id="tabs" aria-label="카테고리"></nav>
@@ -56,27 +60,30 @@
 
 <main>
   <p class="result-line" id="resultLine" aria-live="polite"></p>
-  <section class="grid" id="grid" aria-label="상품 목록"></section>
 
-  <div class="empty" id="empty" hidden>
-    <span class="empty__emoji" aria-hidden="true">🔍</span>
-    <p class="empty__title">해당하는 상품이 없어요</p>
-    <p class="empty__desc">번호를 다시 확인하거나,<br>카테고리를 <b>전체</b>로 바꿔서 찾아보세요.</p>
-    <button class="empty__reset" id="resetBtn" type="button">전체 상품 보기</button>
+  <div class="panel">
+    <section class="grid" id="grid" aria-label="상품 목록"></section>
+
+    <div class="empty" id="empty" hidden>
+      <span class="empty__emoji" aria-hidden="true">🔍</span>
+      <p class="empty__title">해당하는 상품이 없어요</p>
+      <p class="empty__desc">번호를 다시 확인하거나,<br>카테고리를 <b>전체</b>로 바꿔서 찾아보세요.</p>
+      <button class="empty__reset" id="resetBtn" type="button">전체 상품 보기</button>
+    </div>
+
+    <div class="error" id="error" hidden>
+      <p class="error__title">상품 목록을 불러오지 못했어요</p>
+      <p class="error__desc">
+        <code>file://</code> 로 파일을 직접 열면 브라우저 보안 정책 때문에 상품 목록(JSON)을 읽을 수 없어요.
+        이 폴더에서 <code>python3 -m http.server</code> 를 실행해 <code>localhost</code> 주소로 열거나,
+        GitHub Pages에 올려서 확인해 주세요.
+      </p>
+    </div>
+
+    <noscript>
+      <p class="error__desc">이 페이지는 상품 목록을 불러오기 위해 자바스크립트를 사용해요. 브라우저에서 자바스크립트를 켜 주세요.</p>
+    </noscript>
   </div>
-
-  <div class="error" id="error" hidden>
-    <p class="error__title">상품 목록을 불러오지 못했어요</p>
-    <p class="error__desc">
-      <code>file://</code> 로 파일을 직접 열면 브라우저 보안 정책 때문에 상품 목록(JSON)을 읽을 수 없어요.<br>
-      이 폴더에서 <code>python3 -m http.server</code> 를 실행해 <code>localhost</code> 주소로 열거나,
-      GitHub Pages에 올려서 확인해 주세요.
-    </p>
-  </div>
-
-  <noscript>
-    <p class="error__desc">이 페이지는 상품 목록을 불러오기 위해 자바스크립트를 사용해요. 브라우저에서 자바스크립트를 켜 주세요.</p>
-  </noscript>
 </main>
 
 <footer class="footer">

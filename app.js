@@ -1,6 +1,7 @@
 /* =========================================================
-   탐나는 아이템 모음zip
+   탐나는 아이템 모음zip — 3열 썸네일 클릭형
    - 상품은 products.json, 브랜드/문구는 site.json 만 고치면 됩니다.
+   - 카드(썸네일+제목) 전체가 쿠팡 파트너스 링크입니다. (별도 버튼 없음)
    - 번호 검색: "01", "1", "#01", "1번" → 해당 번호 상품만 표시
    - 공유 링크: 사이트주소/#01 또는 #p-01 → 그 상품만 보이게
    ========================================================= */
@@ -18,7 +19,7 @@
 
   const FALLBACK_SITE = {
     brand: { emoji: '🧺', title: '꿀템 모음집', tagline: '영상에서 본 상품, 번호로 1초 만에 찾기' },
-    searchHint: '번호나 상품명으로 검색 (예: 01, 장난감)',
+    searchHint: '예: 09, 탁상시계',
     disclosure: '이 페이지의 링크는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.',
     channels: [],
     footerNote: ''
@@ -243,24 +244,24 @@
   // 채널 버튼 아이콘 (site.json의 url/label로 골라 씁니다. 모르는 채널은 이름만 표시)
   const CHANNEL_ICONS = {
     youtube:
-      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
       '<rect x="2.4" y="5.2" width="19.2" height="13.6" rx="4.2" fill="none" stroke="currentColor" stroke-width="1.7"/>' +
       '<path d="m10.2 9.1 4.9 2.9-4.9 2.9V9.1Z" fill="currentColor"/></svg>',
     instagram:
-      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
       '<rect x="3.6" y="3.6" width="16.8" height="16.8" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/>' +
       '<circle cx="12" cy="12" r="3.9" fill="none" stroke="currentColor" stroke-width="1.7"/>' +
       '<circle cx="16.9" cy="7.1" r="1.1" fill="currentColor"/></svg>',
     tiktok:
-      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
       '<path d="M13.9 4.2v9.6a3.6 3.6 0 1 1-3.6-3.6c.3 0 .6 0 .9.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' +
       '<path d="M13.9 4.2c.5 2.3 2.1 3.9 4.4 4.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
     blog:
-      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
       '<path d="M6.2 3.8h7.6l4.4 4.4v12H6.2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
       '<path d="M8.9 12.1h5.8M8.9 15.4h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
     link:
-      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
       '<path d="M10.5 13.5a3.6 3.6 0 0 0 5.1 0l2.6-2.6a3.6 3.6 0 0 0-5.1-5.1L11.8 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' +
       '<path d="M13.5 10.5a3.6 3.6 0 0 0-5.1 0l-2.6 2.6a3.6 3.6 0 0 0 5.1 5.1l1.3-1.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
   };
@@ -339,6 +340,8 @@
         no: p.no != null && p.no !== '' ? padNo(p.no) : padNo(i + 1),
         category: String(p.category || ''),
         name: String(p.name),
+        // 카드에 보이는 짧은 키워드 (없으면 첫 낱말 2개로 대신)
+        short: p.shortTitle ? String(p.shortTitle) : String(p.name).split(/\s+/).slice(0, 2).join(' '),
         pitch: p.pitch ? String(p.pitch) : '',
         price: p.price ? String(p.price) : '',
         tags: Array.isArray(p.tags) ? p.tags.filter(Boolean).map(String) : [],
@@ -390,40 +393,68 @@
     return state.categories.find((c) => c.id === id) || null;
   }
 
-  function buildCard(p) {
+  function buildTile(p) {
     const cat = categoryOf(p.category);
     const theme = cat && cat.theme ? cat.theme : 'default';
 
-    const card = make('article', 'card');
-    card.id = 'p-' + p.no;
-    card.dataset.no = p.no;
+    const tile = make('article', 'tile tile--' + theme);
+    tile.id = 'p-' + p.no;
+    tile.dataset.no = p.no;
 
-    // 썸네일 (1:1 크롭 + 좌상단 번호 배지 + 우상단 링크 복사)
-    const thumb = make('div', 'thumb thumb--' + theme);
+    // 카드 전체(썸네일 + 번호·키워드)가 하나의 링크입니다.
+    const isDemo = !p.url || p.url === '#' || p.url.startsWith('#');
+    const link = make('a', 'tile__link');
+
+    // 썸네일 (1:1)
+    const thumb = make('span', 'tile__thumb');
     const fallbackEmoji = p.emoji || (cat && cat.emoji) || '🛍️';
 
     if (p.image) {
-      const img = make('img', 'thumb__img');
+      const img = make('img', 'tile__img');
       img.src = p.image;
       img.alt = p.name;
       img.loading = 'lazy';
       img.decoding = 'async';
       img.addEventListener('error', () => {
         img.remove();
-        thumb.prepend(make('span', 'thumb__emoji', fallbackEmoji));
+        thumb.prepend(make('span', 'tile__emoji', fallbackEmoji));
       });
       thumb.appendChild(img);
     } else {
-      const emoji = make('span', 'thumb__emoji', fallbackEmoji);
-      emoji.setAttribute('aria-hidden', 'true');
-      thumb.appendChild(emoji);
+      thumb.appendChild(make('span', 'tile__emoji', fallbackEmoji));
     }
+    link.appendChild(thumb);
 
-    const badge = make('span', 'badge', '#' + p.no);
-    badge.setAttribute('aria-label', p.no + '번 상품');
-    thumb.appendChild(badge);
+    // 번호 + 짧은 키워드 한 줄 (예: "09 플립탁상시계")
+    const cap = make('span', 'tile__cap');
+    cap.appendChild(make('span', 'tile__no', p.no));
+    cap.appendChild(make('span', 'tile__name', p.short || p.name));
+    link.appendChild(cap);
 
-    const copyBtn = make('button', 'copy');
+    if (isDemo) {
+      link.href = '#';
+      link.dataset.demo = '1';
+      link.setAttribute('aria-label', p.name + ' — 데모 링크');
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        toast('데모 링크예요. products.json의 url에 쿠팡 파트너스 링크를 넣으면 바로 연결돼요.');
+      });
+    } else {
+      link.href = withSubId(p.url, subIdFor(p));
+      link.target = '_blank';
+      link.rel = 'nofollow sponsored noopener noreferrer';
+      link.setAttribute('aria-label', p.name + ' — 쿠팡에서 보기 (새 창)');
+      link.addEventListener('click', () => {
+        // 세션 중 출처가 바뀌었거나 누락됐을 때를 대비해 직전에 한 번 더 맞춥니다.
+        const href = withSubId(p.url, subIdFor(p));
+        link.href = href;
+        trackProductClick(p, href);
+      });
+    }
+    tile.appendChild(link);
+
+    // 링크 복사 — 한 상품만 보일 때(번호 검색·딥링크)만 보입니다
+    const copyBtn = make('button', 'tile__copy');
     copyBtn.type = 'button';
     copyBtn.dataset.copy = p.no;
     copyBtn.setAttribute('aria-label', p.no + '번 상품 링크 복사');
@@ -434,57 +465,9 @@
       'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' +
       '<path d="M13.5 10.5a3.6 3.6 0 0 0-5.1 0l-2.6 2.6a3.6 3.6 0 0 0 5.1 5.1l1.3-1.3" ' +
       'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
-    thumb.appendChild(copyBtn);
+    tile.appendChild(copyBtn);
 
-    card.appendChild(thumb);
-
-    // 본문
-    const body = make('div', 'card__body');
-
-    body.appendChild(make('span', 'cat cat--' + theme, cat ? cat.label : '추천'));
-    body.appendChild(make('h3', 'card__name', p.name));
-
-    if (p.pitch) body.appendChild(make('p', 'card__pitch', p.pitch));
-
-    // 태그는 넓은 화면에서만 (모바일 2열에서는 이름·한 줄 소개만 남겨 깔끔하게)
-    const meta = make('div', 'card__meta');
-    if (p.price) meta.appendChild(make('span', 'price', p.price));
-    p.tags.slice(0, 2).forEach((t) => meta.appendChild(make('span', 'tag', t)));
-    if (meta.childNodes.length) body.appendChild(meta);
-
-    // CTA (쿠팡 링크에는 유입 출처 기반 subId가 자동으로 붙습니다)
-    const isDemo = !p.url || p.url === '#' || p.url.startsWith('#');
-    const cta = make('a', 'cta');
-    const buyHref = isDemo ? '#' : withSubId(p.url, subIdFor(p));
-    cta.href = buyHref;
-    cta.innerHTML =
-      '<span>쿠팡에서 보기</span>' +
-      '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">' +
-      '<path d="M7 17 17 7M9 7h8v8" fill="none" stroke="currentColor" stroke-width="2.2" ' +
-      'stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-    if (isDemo) {
-      cta.dataset.demo = '1';
-      cta.setAttribute('aria-label', p.name + ' — 데모 링크');
-      cta.addEventListener('click', (e) => {
-        e.preventDefault();
-        toast('데모 링크예요. products.json의 url에 쿠팡 파트너스 링크를 넣으면 바로 연결돼요.');
-      });
-    } else {
-      cta.target = '_blank';
-      cta.rel = 'nofollow sponsored noopener noreferrer';
-      cta.setAttribute('aria-label', p.name + ' — 쿠팡에서 보기 (새 창)');
-      cta.addEventListener('click', () => {
-        // 세션 중 출처가 바뀌었거나 누락됐을 때를 대비해 직전에 한 번 더 맞춥니다.
-        const href = withSubId(p.url, subIdFor(p));
-        cta.href = href;
-        trackProductClick(p, href);
-      });
-    }
-
-    body.appendChild(cta);
-    card.appendChild(body);
-    return card;
+    return tile;
   }
 
   function currentList() {
@@ -501,8 +484,9 @@
       const terms = q.split(' ').filter(Boolean);
       list = list.filter((p) => {
         const cat = categoryOf(p.category);
+        // 카드에 보이는 짧은 키워드 + 전체 상품명·소개·태그 모두로 검색됩니다
         const hay = norm(
-          [p.name, p.pitch, p.price, p.tags.join(' '), cat ? cat.label : '', '#' + p.no, p.no].join(' ')
+          [p.name, p.short, p.pitch, p.price, p.tags.join(' '), cat ? cat.label : '', '#' + p.no, p.no].join(' ')
         );
         return terms.every((t) => hay.includes(t));
       });
@@ -532,7 +516,7 @@
 
     el.grid.innerHTML = '';
     el.grid.classList.toggle('grid--single', list.length === 1);
-    list.forEach((p) => el.grid.appendChild(buildCard(p)));
+    list.forEach((p) => el.grid.appendChild(buildTile(p)));
 
     el.resultLine.innerHTML = describe(list.length);
     el.empty.hidden = list.length !== 0 || !state.ready;
@@ -542,7 +526,7 @@
 
   function renderSkeletons() {
     el.grid.innerHTML = '';
-    for (let i = 0; i < 4; i += 1) {
+    for (let i = 0; i < 6; i += 1) {
       const s = make('div', 'skeleton');
       s.setAttribute('aria-hidden', 'true');
       el.grid.appendChild(s);
@@ -564,8 +548,8 @@
     render();
 
     if (options.focusResult) {
-      const first = el.grid.querySelector('.card');
-      if (first && list0Count() === 1) {
+      const first = el.grid.querySelector('.tile');
+      if (first && countTiles() === 1) {
         first.scrollIntoView({ block: 'center', behavior: 'smooth' });
         first.classList.add('is-flash');
         setTimeout(() => first.classList.remove('is-flash'), 1600);
@@ -574,16 +558,16 @@
     }
   }
 
-  function list0Count() {
-    return el.grid.querySelectorAll('.card').length;
+  function countTiles() {
+    return el.grid.querySelectorAll('.tile').length;
   }
 
   function focusProduct(no) {
-    const card = document.getElementById('p-' + padNo(no));
-    if (!card) return;
-    card.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    card.classList.add('is-flash');
-    setTimeout(() => card.classList.remove('is-flash'), 1700);
+    const tile = document.getElementById('p-' + padNo(no));
+    if (!tile) return;
+    tile.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    tile.classList.add('is-flash');
+    setTimeout(() => tile.classList.remove('is-flash'), 1700);
   }
 
   function deepLinkQuery() {
@@ -646,7 +630,8 @@
       if (num !== null) focusProduct(num);
     });
 
-    el.grid.addEventListener('click', async (e) => {      const btn = e.target.closest('[data-copy]');
+    el.grid.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-copy]');
       if (!btn) return;
       const no = btn.dataset.copy;
       // 복사하는 링크에도 지금 유입 출처를 담아 두어, 그 링크로 들어온 사람도 같은 출처로 집계되게 합니다.
