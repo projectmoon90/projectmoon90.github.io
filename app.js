@@ -18,7 +18,7 @@
   const SRC_DEFAULT = 'direct';
 
   const FALLBACK_SITE = {
-    brand: { emoji: '🧺', title: '꿀템 모음집', tagline: '영상에서 본 상품, 번호로 1초 만에 찾기' },
+    brand: { avatar: '', emoji: '🧺', title: '꿀템 모음집', tagline: '영상에서 본 상품, 번호로 1초 만에 찾기' },
     searchHint: '예: 09, 탁상시계',
     disclosure: '이 페이지의 링크는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.',
     channels: [],
@@ -37,6 +37,7 @@
 
   const $ = (id) => document.getElementById(id);
   const el = {
+    brandAvatar: $('brandAvatar'),
     brandEmoji: $('brandEmoji'),
     brandTitle: $('brandTitle'),
     brandTagline: $('brandTagline'),
@@ -275,12 +276,27 @@
     return 'link';
   }
 
+  // 상단 아바타: site.json의 brand.avatar 경로가 있으면 그 이미지를, 없으면 이모지를 쓴다.
+  function applyAvatar(brand) {
+    const img = el.brandAvatar;
+    const src = brand.avatar || img.getAttribute('src') || '';
+    if (!src) {
+      img.hidden = true;
+      el.brandEmoji.hidden = false;
+      return;
+    }
+    if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+    img.hidden = false;
+    el.brandEmoji.hidden = true;
+  }
+
   function applySite(site) {
     const s = Object.assign({}, FALLBACK_SITE, site || {});
     const brand = Object.assign({}, FALLBACK_SITE.brand, s.brand || {});
     state.site = s;
 
     el.brandEmoji.textContent = brand.emoji || '🧺';
+    applyAvatar(brand);
     el.brandTitle.textContent = brand.title || FALLBACK_SITE.brand.title;
     el.brandTagline.textContent = brand.tagline || '';
     el.brandTagline.hidden = !brand.tagline;
@@ -581,6 +597,14 @@
   }
 
   function bind() {
+    // 아바타 이미지를 못 불러오면 바구니 이모지로 돌아간다.
+    if (el.brandAvatar) {
+      el.brandAvatar.addEventListener('error', () => {
+        el.brandAvatar.hidden = true;
+        el.brandEmoji.hidden = false;
+      });
+    }
+
     el.tabs.addEventListener('click', (e) => {
       const btn = e.target.closest('.tab');
       if (!btn) return;
