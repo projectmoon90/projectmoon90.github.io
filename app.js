@@ -550,7 +550,7 @@
     if (options.focusResult) {
       const first = el.grid.querySelector('.tile');
       if (first && countTiles() === 1) {
-        first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        first.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         first.classList.add('is-flash');
         setTimeout(() => first.classList.remove('is-flash'), 1600);
         el.searchInput.blur();
@@ -565,7 +565,7 @@
   function focusProduct(no) {
     const tile = document.getElementById('p-' + padNo(no));
     if (!tile) return;
-    tile.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    tile.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     tile.classList.add('is-flash');
     setTimeout(() => tile.classList.remove('is-flash'), 1700);
   }
