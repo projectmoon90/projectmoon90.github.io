@@ -354,6 +354,8 @@
       .filter((p) => p && p.name && !p.hidden)
       .map((p, i) => ({
         no: p.no != null && p.no !== '' ? padNo(p.no) : padNo(i + 1),
+        // products.json에서의 위치 — 번호가 같을 때 뒤에 있는(나중에 추가된) 상품이 위로 오게 하는 기준
+        order: i,
         category: String(p.category || ''),
         name: String(p.name),
         // 카드에 보이는 짧은 키워드 (없으면 첫 낱말 2개로 대신)
@@ -365,7 +367,8 @@
         image: p.image ? String(p.image) : '',
         url: p.url == null ? '' : String(p.url).trim()
       }))
-      .sort((a, b) => productNo(a) - productNo(b));
+      // 최신 상품이 맨 위: 번호 내림차순(11 → 10 → 09 …), 번호가 같으면 배열 뒤쪽 우선
+      .sort((a, b) => productNo(b) - productNo(a) || b.order - a.order);
 
     // 카테고리 정의에 없는 상품도 탭에서 사라지지 않도록 보정
     products.forEach((p) => {
