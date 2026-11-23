@@ -113,8 +113,11 @@
     }
   }
 
+  // 상품·설정 JSON은 항상 새로 받습니다.
+  // 브라우저 캐시는 no-store로 막고, GitHub Pages CDN(최대 10분 보관)은 매번 다른 t 값으로 우회합니다.
   async function loadJSON(path) {
-    const res = await fetch(path, { cache: 'no-store' });
+    const url = path + (path.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(path + ' ' + res.status);
     return res.json();
   }
