@@ -208,6 +208,23 @@
       "emoji": "🌬️",
       "image": "assets/p11.jpg",
       "url": "https://link.coupang.com/a/iUaUAOdorc"
+    },
+    {
+      "no": "12",
+      "category": "toy",
+      "name": "빅엔터 스트레스 해소 펀치 대형 엔터키",
+      "shortTitle": "대형엔터키",
+      "pitch": "USB에 꽂으면 진짜 Enter 키! 주먹으로 꾹꾹 눌러 스트레스 풀고, 점심엔 낮잠 베개로",
+      "price": "",
+      "tags": [
+        "대형엔터키",
+        "스트레스해소",
+        "USB엔터키",
+        "낮잠베개"
+      ],
+      "emoji": "⌨️",
+      "image": "assets/p12.jpg",
+      "url": "https://link.coupang.com/a/iXCmyFOhno"
     }
   ]
 }
